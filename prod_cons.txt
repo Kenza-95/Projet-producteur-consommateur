@@ -1,0 +1,157 @@
+
+# importer les differentes libraires
+import threading
+import time
+import random
+import queue as Queue
+import sys
+
+# declarer le verrou des threads
+verrou = threading.RLock()
+
+# declarer la liste items de type Queue
+items = Queue.Queue()
+
+# déclater la liste des producteurs et consamteurs
+producers = []
+consumers = []
+
+# initialisé le compteur pour la simation ( le nombre d'itération )
+cpt = 0
+
+# nombre maximal d'itération
+max_iter_for_item_created = 25
+
+# décalaration de la classe Producteur
+class ProducerThread(threading.Thread):
+
+    # initialisation d'un constructeur
+    def __init__(self, id=None, name=None, verrou=None):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.verrou = verrou
+        self.id = id
+        print(" ~~ Producer thread - ", self.id, " created.... ~~ ")
+
+    # definition de la fonction d'attente avec time.sleep
+    def wait(self):
+        time.sleep(random.random())
+
+    # definition de la fonction produce qui permet d'ajouter
+    # des éléments a la liste items
+    def produce(self):
+
+        # génération d'un INT aléatoire en 1-10
+        item = random.randint(1, 10)
+        #ajout a la liste
+        items.put(item)
+        # affichage
+        print('+ Producer putting ' + str(item)
+              + ' : ' + str(items.qsize()) + ' items in queue ', end=" ")
+        print("[", end=" ")
+        for elem in items.queue:
+            print(elem, end=" ")
+        print("]")
+
+    # definition de la fonction run (start),
+    def run(self):
+        # definir la variable global déja initialisé
+        global cpt
+        # bouclé tant que le nombre max d'itération n'est pas atteint
+        while cpt < max_iter_for_item_created:
+            # mettre le verrou ( le lock de linstance )
+            with verrou:
+                self.produce()
+                self.wait()
+                cpt += 1
+
+
+# décalaration de la classe Consommateur
+class ConsumerThread(threading.Thread):
+
+    # initialisation d'un constructeur
+    def __init__(self, id=None, name=None, verrou=None):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.verrou = verrou
+        self.id = id
+        print(" ~~ Consumer thread - ", self.id, " created.... ~~ ")
+        return
+
+    # definition de la fonction d'attente avec time.sleep
+    def wait(self):
+        time.sleep(random.random())
+
+    # definition de la fonction consume qui permet de consumer et enlever
+    # des éléments a la liste items
+    def consume(self):
+
+        # extraire le premier élement de la Queue
+        item = items.get()
+        #affichage
+        print('-----> Consumer getting ' + str(item)
+              + ' : ' + str(items.qsize()) + ' items in queue ', end=" ")
+        print("[", end=" ")
+        for elem in items.queue:
+            print(elem, end=" ")
+        print("]")
+
+    # definition de la fonction run ( start )
+    def run(self):
+        # definir la variable global déja initialisé
+        global cpt
+        # bouclé tant que le nombre max d'itération n'est pas atteint
+        while cpt < max_iter_for_item_created:
+            if not items.empty():
+                with verrou:
+                    self.consume()
+                    self.wait()
+            else:
+                print("---- consumer tries to get an item but queue empty ----")
+                return
+        return
+
+
+# la definition de la fonction main
+if __name__ == '__main__':
+
+    print("---------------------------------------------")
+    print("             Init Threads                    ")
+    print("---------------------------------------------")
+
+    #ajoute des differents Producers a la liste des producteurs
+    producers.append(ProducerThread(id=1, name='producer', verrou=verrou))
+    producers.append(ProducerThread(id=2, name='producer1', verrou=verrou))
+    producers.append(ProducerThread(id=3, name='producer2', verrou=verrou))
+    producers.append(ProducerThread(id=4, name='producer3', verrou=verrou))
+
+    #ajoute des differents Consumers a la liste des consomateurs
+    consumers.append(ConsumerThread(id=1, name='consumer', verrou=verrou))
+    consumers.append(ConsumerThread(id=2, name='consumer1', verrou=verrou))
+    consumers.append(ConsumerThread(id=3, name='consumer2', verrou=verrou))
+    consumers.append(ConsumerThread(id=4, name='consumer3', verrou=verrou))
+
+    print("---------------------------------------------")
+    print("             Start simulation                ")
+    print("---------------------------------------------")
+
+    # start les differents thread des producteurs
+    for elem in producers:
+        elem.start()
+
+    # start les differents thread des consommateurs
+    for elem in consumers:
+        elem.start()
+
+    # join les differents thread des producteurs
+    for elem in producers:
+        elem.join()
+
+    # join les differents thread des consommateurs
+    for elem in consumers:
+        elem.join()
+
+    print("---------------------------------------------")
+    print("             End of simulation               ")
+    print("---------------------------------------------")
+
